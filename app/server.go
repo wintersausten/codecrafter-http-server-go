@@ -76,6 +76,13 @@ func main() {
       fmt.Println("Error writing data to connection: ", err.Error())
       os.Exit(1)
     }
+  } else if req.path == "/user-agent" {
+    response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(req.headers["User-Agent"]), req.headers["User-Agent"])
+    _, err = conn.Write([]byte(response))
+    if err != nil {
+      fmt.Println("Error writing data to connection: ", err.Error())
+      os.Exit(1)
+    }
   } else if len(pathParts) == 2 && pathParts[0] == "echo" {
     response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(pathParts[1]), pathParts[1])
     _, err = conn.Write([]byte(response))
