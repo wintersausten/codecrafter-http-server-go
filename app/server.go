@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -59,15 +60,30 @@ func main() {
     }
   }
 
-  switch req.path {
-  case "/":
+  parsedURL, err := url.Parse(req.path)
+  if err != nil {
+    fmt.Printf("Error parsing URL: %s\n", err)
+  }
+  pathParts := strings.Split(parsedURL.Path, "/")
+  if len(pathParts) > 0 && pathParts[0] == "" {
+      pathParts = pathParts[1:]
+  }
+
+  if req.path == "/" {
     response := "HTTP/1.1 200 OK\r\n\r\n"
     _, err = conn.Write([]byte(response))
     if err != nil {
       fmt.Println("Error writing data to connection: ", err.Error())
       os.Exit(1)
     }
-  default:
+  } else if len(pathParts) == 2 && pathParts[0] == "echo" {
+    response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(pathParts[1]), pathParts[1])
+    _, err = conn.Write([]byte(response))
+    if err != nil {
+      fmt.Println("Error writing data to connection: ", err.Error())
+      os.Exit(1)
+    }
+  } else {
     response := "HTTP/1.1 404 Not Found\r\n\r\n"
     _, err = conn.Write([]byte(response))
     if err != nil {
@@ -76,3 +92,4 @@ func main() {
     }
   }
 }
+
