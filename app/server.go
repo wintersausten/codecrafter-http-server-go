@@ -64,7 +64,7 @@ func main() {
   if err != nil {
     fmt.Printf("Error parsing URL: %s\n", err)
   }
-  pathParts := strings.Split(parsedURL.Path, "/")
+  pathParts := strings.SplitN(parsedURL.Path, "/", 3)
   if len(pathParts) > 0 && pathParts[0] == "" {
       pathParts = pathParts[1:]
   }
