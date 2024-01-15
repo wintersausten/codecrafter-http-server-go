@@ -99,7 +99,7 @@ func handleConnection(conn net.Conn) {
     }
     sendSuccessResponse(contents, "application/octet-stream", conn)
   } else if len(pathParts) == 2 && pathParts[0] == "echo" {
-    sendSuccessResponse([]byte(pathParts[1]), "test/plain", conn)
+    sendSuccessResponse([]byte(pathParts[1]), "text/plain", conn)
   } else {
     sendNotFoundResponse(conn)
   }
