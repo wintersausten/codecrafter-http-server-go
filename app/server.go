@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -16,7 +18,11 @@ type req struct {
   headers map[string]string
 }
 
+var dirFlag = flag.String("directory", ".", "directory to serve files from")
+
 func main() {
+  flag.Parse()
+
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
 		fmt.Println("Failed to bind to port 4221")
@@ -76,33 +82,50 @@ func handleConnection(conn net.Conn) {
   }
 
   if req.path == "/" {
-    response := "HTTP/1.1 200 OK\r\n\r\n"
-    _, err = conn.Write([]byte(response))
-    if err != nil {
-      fmt.Println("Error writing data to connection: ", err.Error())
-      os.Exit(1)
-    }
+    sendSuccessResponse(nil, "", conn)
   } else if req.path == "/user-agent" {
-    response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(req.headers["User-Agent"]), req.headers["User-Agent"])
-    _, err = conn.Write([]byte(response))
+    sendSuccessResponse([]byte(req.headers["User-Agent"]), "text/plain", conn)
+  } else if len(pathParts) == 2 && pathParts[0] == "files" {
+    filePath := filepath.Join(*dirFlag, pathParts[1])
+    _, err := os.Stat(filePath)
     if err != nil {
-      fmt.Println("Error writing data to connection: ", err.Error())
+      fmt.Println("Error accessing requested file: ", err.Error())
       os.Exit(1)
     }
+    contents, err := os.ReadFile(filePath)
+    if err != nil {
+      fmt.Println("Error reading requested file: ", err.Error())
+      os.Exit(1)
+    }
+    sendSuccessResponse(contents, "application/octet-stream", conn)
   } else if len(pathParts) == 2 && pathParts[0] == "echo" {
-    response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(pathParts[1]), pathParts[1])
-    _, err = conn.Write([]byte(response))
-    if err != nil {
-      fmt.Println("Error writing data to connection: ", err.Error())
-      os.Exit(1)
-    }
+    sendSuccessResponse([]byte(pathParts[1]), "test/plain", conn)
   } else {
-    response := "HTTP/1.1 404 Not Found\r\n\r\n"
-    _, err = conn.Write([]byte(response))
-    if err != nil {
-      fmt.Println("Error writing data to connection: ", err.Error())
-      os.Exit(1)
-    }
+    sendNotFoundResponse(conn)
   }
 }
 
+func sendNotFoundResponse(conn net.Conn) {
+  response := []byte("HTTP/1.1 404 Not Found\r\n\r\n")
+  _, err := conn.Write(response)
+  if err != nil {
+    fmt.Println("Error writing data to connection: ", err.Error())
+    os.Exit(1)
+  }
+}
+
+func sendSuccessResponse(content []byte, contentType string, conn net.Conn) {
+  response := []byte("HTTP/1.1 200 OK\r\n")
+  if content != nil && contentType != "" {
+    response = append(response, []byte(fmt.Sprintf("Content-Type: %s\r\n", contentType))...)
+    response = append(response, []byte(fmt.Sprintf("Content-Length: %d\r\n", len(content)))...)
+    response = append(response, []byte("\r\n")...)
+    response = append(response, content...)
+  }
+  response = append(response, []byte("\r\n")...)
+  _, err := conn.Write(response)
+  if err != nil {
+    fmt.Println("Error writing data to connection: ", err.Error())
+    os.Exit(1)
+  }
+}
