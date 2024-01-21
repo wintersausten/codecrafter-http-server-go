@@ -90,7 +90,8 @@ func handleConnection(conn net.Conn) {
     _, err := os.Stat(filePath)
     if err != nil {
       fmt.Println("Error accessing requested file: ", err.Error())
-      os.Exit(1)
+      sendNotFoundResponse(conn)
+      return
     }
     contents, err := os.ReadFile(filePath)
     if err != nil {
@@ -129,3 +130,4 @@ func sendSuccessResponse(content []byte, contentType string, conn net.Conn) {
     os.Exit(1)
   }
 }
+// TODO: probably missing error endpoints for files
